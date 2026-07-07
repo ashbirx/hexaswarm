@@ -44,6 +44,15 @@ typedef enum {
 } GameScreen;
 
 // TODO: Define your custom data types here
+typedef struct Player
+{
+    Vector2 position;
+    float radius;
+    Vector2 barrelSize;
+    float speed;
+    float rotation;
+    Color color;
+} Player;
 
 //----------------------------------------------------------------------------------
 // Global Variables Definition (local to this module)
@@ -53,14 +62,17 @@ static const int screenHeight = 720;
 
 static RenderTexture2D target = { 0 };  // Render texture to render our game
 static int frameCounter = 0;
-static GameScreen currentScreen = SCREEN_LOGO;
-static bool gamePaused = false;
 
 // TODO: Define global variables here, recommended to make them static
+static GameScreen currentScreen = SCREEN_LOGO;
+static bool gamePaused = false;
+Player player = { 0 };
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
+static void InitGame(void);
+
 static void UpdateDrawFrame(void);      // Update and Draw one frame
 
 static void UpdateLogoScreen();
@@ -89,6 +101,7 @@ int main(void)
     InitWindow(screenWidth, screenHeight, "raylib gamejam template");
     
     // TODO: Load resources / Initialize variables at this point
+    InitGame();
     
     // Render texture to draw, enables screen scaling
     // NOTE: If screen is scaled, mouse input should be scaled proportionally
@@ -123,6 +136,21 @@ int main(void)
 //--------------------------------------------------------------------------------------------
 // Module Functions Definition
 //--------------------------------------------------------------------------------------------
+// Init game
+void InitGame(void)
+{
+    // init player
+    player.radius = 25.0f;
+    player.position = (Vector2){
+        (float)screenWidth/2.0f, 
+        (float)screenHeight/2.0f
+    }; 
+    player.barrelSize = (Vector2){20.0f, 50.0f};
+    player.speed = 5.0f;
+    player.rotation = 0.0f;
+    player.color = BLACK;
+}
+
 // Update and draw frame
 void UpdateDrawFrame(void)
 {
@@ -239,14 +267,36 @@ static void UpdateGamePlayScreen(void)
     if (IsKeyPressed(KEY_ENTER))
         currentScreen = SCREEN_ENDING;
     if (IsKeyPressed(KEY_P))
+    {
         gamePaused = !gamePaused;
+        return;
+    }
+
+    if (IsKeyDown(KEY_RIGHT))
+        player.rotation += player.speed;
+    else if (IsKeyDown(KEY_LEFT))
+        player.rotation -= player.speed;
+    
 }
 
 // Draw gameplay screen
 static void DrawGamePlayScreen(void)
 {
-    const char *title = !gamePaused ? "GAMEPLAY SCREEN": "GAME PAUSED";
-    DrawText(title, screenWidth/2 - MeasureText(title, fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, BLACK);
+    if (gamePaused) {
+        DrawText("GAME PAUSED", screenWidth/2 - MeasureText("GAME PAUSED", fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, BLACK);
+        return;
+    }
+
+    // turret body
+    DrawCircleV(player.position, player.radius, player.color);
+
+    // turret barrel
+    DrawRectanglePro(
+        (Rectangle){player.position.x, player.position.y, player.barrelSize.x, player.barrelSize.y},
+        (Vector2){player.barrelSize.x/2, 0.0f},
+        player.rotation,
+        player.color
+    );
 }
 
 // Update ending screen
