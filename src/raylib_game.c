@@ -31,6 +31,8 @@
     #define LOG(...)
 #endif
 
+#define fontSize 20
+
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
 //----------------------------------------------------------------------------------
@@ -51,6 +53,8 @@ static const int screenHeight = 720;
 
 static RenderTexture2D target = { 0 };  // Render texture to render our game
 static int frameCounter = 0;
+static GameScreen currentScreen = SCREEN_LOGO;
+static bool gamePaused = false;
 
 // TODO: Define global variables here, recommended to make them static
 
@@ -58,6 +62,18 @@ static int frameCounter = 0;
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
 static void UpdateDrawFrame(void);      // Update and Draw one frame
+
+static void UpdateLogoScreen();
+static void DrawLogoScreen(void);
+
+static void UpdateTitleScreen(void);
+static void DrawTitleScreen(void);
+
+static void UpdateGamePlayScreen(void);
+static void DrawGamePlayScreen(void);
+
+static void UpdateEndingScreen(void);
+static void DrawEndingScreen(void);
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -115,6 +131,24 @@ void UpdateDrawFrame(void)
     // TODO: Update variables / Implement example logic at this point
    
     frameCounter++;
+
+    switch (currentScreen)
+    {
+    case SCREEN_LOGO:
+        UpdateLogoScreen();
+        break;
+    case SCREEN_TITLE:
+        UpdateTitleScreen();
+        break;
+    case SCREEN_GAMEPLAY:
+        UpdateGamePlayScreen();
+        break;
+    case SCREEN_ENDING:
+        UpdateEndingScreen();
+        break;
+    default:
+        break;
+    }
     //----------------------------------------------------------------------------------
 
     // Draw
@@ -123,19 +157,26 @@ void UpdateDrawFrame(void)
     // it could be useful for scaling or further shader postprocessing
     BeginTextureMode(target);
         ClearBackground(RAYWHITE);
+        DrawRectangleLinesEx((Rectangle){ 0, 0, screenWidth, screenHeight }, 16, BLACK);
         
         // TODO: Draw your game screen here
-
-        DrawRectangle(70, 90, 200, 200, BLACK);
-        DrawRectangle(70 + 16, 90 + 16, 200 - 32, 200 - 32, RAYWHITE);
-        DrawText("raylib", 70 + 200 - MeasureText("raylib", 40) - 32, 90 + 200 - 40 - 24, 40, BLACK);
-
-        DrawText("6.x", 290, 90 - 26, 280, BLACK);
-        DrawText("GAMEJAM", 70, 90 + 210, 120, MAROON);
-
-        if ((frameCounter/20)%2) DrawText("are you ready?", 160, 500, 50, BLACK);
-        
-        DrawRectangleLinesEx((Rectangle){ 0, 0, screenWidth, screenHeight }, 16, BLACK);
+        switch (currentScreen)
+        {
+        case SCREEN_LOGO:
+            DrawLogoScreen();
+            break;
+        case SCREEN_TITLE:
+            DrawTitleScreen();
+            break;
+        case SCREEN_GAMEPLAY:
+            DrawGamePlayScreen();
+            break;
+        case SCREEN_ENDING:
+            DrawEndingScreen();
+            break;
+        default:
+            break;
+        }        
         
     EndTextureMode();
     
@@ -151,4 +192,77 @@ void UpdateDrawFrame(void)
 
     EndDrawing();
     //----------------------------------------------------------------------------------  
+}
+
+// Update logo screen
+static void UpdateLogoScreen(void)
+{
+    if (frameCounter > 180)
+    {
+        currentScreen = SCREEN_TITLE;
+        frameCounter = 0;
+    }
+}
+
+// Draw logo screen
+static void DrawLogoScreen(void)
+{
+    int secondsLeft = 3 - (frameCounter/60);
+    const char *title = "LOGO SCREEN";
+    const char *subTitle = TextFormat("LOADING IN %d...", secondsLeft);
+
+    DrawText(title, screenWidth/2 - MeasureText(title, fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, BLACK);
+    DrawText(subTitle, screenWidth/2 - MeasureText(subTitle, fontSize)/2, screenHeight/2 + fontSize*3/2 + 20, fontSize, BLACK);
+}
+
+// Update title screen
+static void UpdateTitleScreen(void)
+{
+    if (IsKeyPressed(KEY_ENTER))
+        currentScreen = SCREEN_GAMEPLAY;
+}
+
+// Draw title screen
+static void DrawTitleScreen(void)
+{
+    const char *title = "TITLE SCREEN";
+    const char *subTitle = "PRESS [ENTER] to START";
+
+    DrawText(title, screenWidth/2 - MeasureText(title, fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, BLACK);
+    if ((frameCounter/20)%2) 
+        DrawText(subTitle, screenWidth/2 - MeasureText(subTitle, fontSize)/2, screenHeight/2 + fontSize*3/2 + 20, fontSize, BLACK);
+}
+
+// Update gameplay screen
+static void UpdateGamePlayScreen(void)
+{
+    if (IsKeyPressed(KEY_ENTER))
+        currentScreen = SCREEN_ENDING;
+    if (IsKeyPressed(KEY_P))
+        gamePaused = !gamePaused;
+}
+
+// Draw gameplay screen
+static void DrawGamePlayScreen(void)
+{
+    const char *title = !gamePaused ? "GAMEPLAY SCREEN": "GAME PAUSED";
+    DrawText(title, screenWidth/2 - MeasureText(title, fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, BLACK);
+}
+
+// Update ending screen
+static void UpdateEndingScreen(void)
+{
+    if (IsKeyPressed(KEY_ENTER))
+        currentScreen = SCREEN_TITLE;
+}
+
+// Draw ending screen
+static void DrawEndingScreen(void)
+{
+    const char *title = "ENDING SCREEN";
+    const char *subTitle = "PRESS [ENTER] TO PLAY AGAIN";
+
+    DrawText(title, screenWidth/2 - MeasureText(title, fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, BLACK);
+    if ((frameCounter/20)%2) 
+        DrawText(subTitle, screenWidth/2 - MeasureText(subTitle, fontSize)/2, screenHeight/2 + fontSize*3/2 + 20, fontSize, BLACK);
 }
