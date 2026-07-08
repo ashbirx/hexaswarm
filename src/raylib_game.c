@@ -10,6 +10,7 @@
 ********************************************************************************************/
 
 #include "raylib.h"
+#include "raymath.h"
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>      // Emscripten library
@@ -32,6 +33,8 @@
 #endif
 
 #define fontSize 20
+#define MAX_BULLETS 64
+#define FIRE_RATE 4 // 4 shots in 1 second
 
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
@@ -49,10 +52,20 @@ typedef struct Player
     Vector2 position;
     float radius;
     Vector2 barrelSize;
-    float speed;
+    float rotationSpeed;
     float rotation;
     Color color;
 } Player;
+
+typedef struct Bullet
+{
+    Vector2 position;
+    Vector2 direction;
+    float radius;
+    float speed;
+    Color color;
+    bool active;
+} Bullet;
 
 //----------------------------------------------------------------------------------
 // Global Variables Definition (local to this module)
@@ -67,6 +80,10 @@ static int frameCounter = 0;
 static GameScreen currentScreen = SCREEN_LOGO;
 static bool gamePaused = false;
 Player player = { 0 };
+Bullet bullets[MAX_BULLETS] = { 0 };
+static int bulletIndex = 0;
+static int fireInterval = 60 / FIRE_RATE; //  1 shot per 15 frames, so 4 shots in 60 frames (1 sec)
+static int fireCooldown = 0;
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -146,9 +163,19 @@ void InitGame(void)
         (float)screenHeight/2.0f
     }; 
     player.barrelSize = (Vector2){20.0f, 50.0f};
-    player.speed = 5.0f;
+    player.rotationSpeed = 5.0f;
     player.rotation = 0.0f;
     player.color = BLACK;
+
+    for (int i = 0; i < MAX_BULLETS; i++)
+    {
+        bullets[i].position = (Vector2){0.0f, 0.0f};
+        bullets[i].direction = (Vector2){0.0f, 0.0f};
+        bullets[i].radius = 5.0f;
+        bullets[i].speed = 12.0f;
+        bullets[i].color = ORANGE;
+        bullets[i].active = false;
+    }
 }
 
 // Update and draw frame
@@ -272,11 +299,48 @@ static void UpdateGamePlayScreen(void)
         return;
     }
 
+    // player rotation about centre of window
     if (IsKeyDown(KEY_RIGHT))
-        player.rotation += player.speed;
+        player.rotation += player.rotationSpeed;
     else if (IsKeyDown(KEY_LEFT))
-        player.rotation -= player.speed;
+        player.rotation -= player.rotationSpeed;
+
+    // position the bullet ready to be fired at the tip of the barrel
+    if (fireCooldown > 0) fireCooldown--;
+
+    if (IsKeyDown(KEY_SPACE) && fireCooldown <= 0) 
+    {
+        Vector2 localOffset = { 0.0f, player.barrelSize.y };
+        Vector2 barrelTipPosition = Vector2Add(player.position, Vector2Rotate(localOffset, player.rotation*DEG2RAD));
     
+        Vector2 localForward = { 0.0f, 1.0f };
+        Vector2 direction = Vector2Rotate(localForward, player.rotation*DEG2RAD);
+
+        bullets[bulletIndex].active = true;
+        bullets[bulletIndex].position = barrelTipPosition;
+        bullets[bulletIndex].direction = direction;
+        bulletIndex = (bulletIndex + 1) % MAX_BULLETS;
+        fireCooldown = fireInterval;
+    }
+
+    // bullet movement logic
+    for (int i = 0; i < MAX_BULLETS; i++)
+    {
+        if (bullets[i].active)
+        {
+            bullets[i].position.x += bullets[i].direction.x * bullets[i].speed;
+            bullets[i].position.y += bullets[i].direction.y * bullets[i].speed;
+
+            // deactivate once fully off-screen (with a small margin for radius)
+            if (bullets[i].position.x < 0 - bullets[i].radius ||
+                bullets[i].position.x > screenWidth + bullets[i].radius ||
+                bullets[i].position.y < 0 - bullets[i].radius ||
+                bullets[i].position.y > screenHeight + bullets[i].radius)
+            {
+                bullets[i].active = false;
+            }
+        }
+    }
 }
 
 // Draw gameplay screen
@@ -297,6 +361,17 @@ static void DrawGamePlayScreen(void)
         player.rotation,
         player.color
     );
+
+    // draw bullet if active
+    for (int i = 0; i < MAX_BULLETS; i++)
+    {
+        if (bullets[i].active)
+        DrawCircleV(
+            bullets[i].position, 
+            bullets[i].radius, 
+            bullets[i].color
+        );
+    }
 }
 
 // Update ending screen
