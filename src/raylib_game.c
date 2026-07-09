@@ -392,6 +392,36 @@ static void UpdateGamePlayScreen(void)
         SpawnEnemy();
         enemySpawnCooldown = enemySpawnInterval;
     }
+
+    // enemy movement logic
+    for (int i = 0; i < MAX_ENEMIES; i++)
+    {
+        if (enemies[i].active)
+        {
+            // move towards player
+            enemies[i].position.x += enemies[i].direction.x * enemies[i].speed;
+            enemies[i].position.y += enemies[i].direction.y * enemies[i].speed;
+
+            // collision detection & resolution: enemy vs walls
+            if (
+                (enemies[i].position.x - enemies[i].radius <= 0 && enemies[i].direction.x < 0) ||
+                (enemies[i].position.x + enemies[i].radius >= screenWidth && enemies[i].direction.x > 0)
+            )
+                enemies[i].direction.x *= -1;
+           if (
+                (enemies[i].position.y - enemies[i].radius <= 0 && enemies[i].direction.y < 0) ||
+                (enemies[i].position.y + enemies[i].radius>= screenHeight && enemies[i].direction.y > 0)
+            )
+                enemies[i].direction.y *= -1;
+
+            // collision detection & resolution: enemy vs player
+            if (CheckCollisionCircles(enemies[i].position, enemies[i].radius, player.position, player.radius))
+            {
+                enemies[i].active = false;
+                LOG("Enemy reached player!\n");
+            }
+        }
+    }
 }
 
 void SpawnEnemy(void)
