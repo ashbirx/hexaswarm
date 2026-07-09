@@ -35,6 +35,7 @@
 #define fontSize 20
 #define MAX_BULLETS 64
 #define FIRE_RATE 4 // 4 shots in 1 second
+#define MAX_ENEMIES 32
 
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
@@ -67,6 +68,25 @@ typedef struct Bullet
     bool active;
 } Bullet;
 
+typedef struct Enemy
+{
+    Vector2 position;
+    Vector2 direction;
+    float speed;
+    float radius;
+    int hp;
+    Color color;
+    bool active;
+} Enemy;
+
+typedef enum Edge
+{
+    EDGE_TOP = 0,
+    EDGE_BOTTOM,
+    EDGE_LEFT,
+    EDGE_RIGHT
+} Edge;
+
 //----------------------------------------------------------------------------------
 // Global Variables Definition (local to this module)
 //----------------------------------------------------------------------------------
@@ -79,11 +99,14 @@ static int frameCounter = 0;
 // TODO: Define global variables here, recommended to make them static
 static GameScreen currentScreen = SCREEN_LOGO;
 static bool gamePaused = false;
-Player player = { 0 };
-Bullet bullets[MAX_BULLETS] = { 0 };
+static Player player = { 0 };
+static Bullet bullets[MAX_BULLETS] = { 0 };
 static int bulletIndex = 0;
 static int fireInterval = 60 / FIRE_RATE; //  1 shot per 15 frames, so 4 shots in 60 frames (1 sec)
 static int fireCooldown = 0;
+static Enemy enemies[MAX_ENEMIES] = { 0 };
+static int enemySpawnInterval = 90; // enemies will spwan after every 1.5 sec
+static int enemySpawnCooldown = 0;
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -103,6 +126,9 @@ static void DrawGamePlayScreen(void);
 
 static void UpdateEndingScreen(void);
 static void DrawEndingScreen(void);
+
+static void SpawnEnemy(void);
+static Vector2 GetSpawnPosition(void);
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -167,6 +193,7 @@ void InitGame(void)
     player.rotation = 0.0f;
     player.color = BLACK;
 
+    // init bullets
     for (int i = 0; i < MAX_BULLETS; i++)
     {
         bullets[i].position = (Vector2){0.0f, 0.0f};
@@ -175,6 +202,18 @@ void InitGame(void)
         bullets[i].speed = 12.0f;
         bullets[i].color = ORANGE;
         bullets[i].active = false;
+    }
+
+    // init enemy
+    for (int i = 0; i < MAX_ENEMIES; i++)
+    {
+        enemies[i].position = (Vector2){0.0f, 0.0f};
+        enemies[i].direction = (Vector2){0.0f, 0.0f};
+        enemies[i].radius = 20.0f;
+        enemies[i].speed = 1.5f;
+        enemies[i].hp = 1;
+        enemies[i].active = false;
+        enemies[i].color = DARKGREEN;
     }
 }
 
@@ -294,10 +333,9 @@ static void UpdateGamePlayScreen(void)
     if (IsKeyPressed(KEY_ENTER))
         currentScreen = SCREEN_ENDING;
     if (IsKeyPressed(KEY_P))
-    {
         gamePaused = !gamePaused;
+    if (gamePaused)
         return;
-    }
 
     // player rotation about centre of window
     if (IsKeyDown(KEY_RIGHT))
@@ -335,12 +373,76 @@ static void UpdateGamePlayScreen(void)
             if (bullets[i].position.x < 0 - bullets[i].radius ||
                 bullets[i].position.x > screenWidth + bullets[i].radius ||
                 bullets[i].position.y < 0 - bullets[i].radius ||
-                bullets[i].position.y > screenHeight + bullets[i].radius)
+                bullets[i].position.y > screenHeight + bullets[i].radius
+            )
             {
                 bullets[i].active = false;
             }
         }
     }
+
+    // enemy spawning
+    if (enemySpawnCooldown > 0)
+    {
+        enemySpawnCooldown--;
+    }
+
+    if (enemySpawnCooldown == 0)
+    {
+        SpawnEnemy();
+        enemySpawnCooldown = enemySpawnInterval;
+    }
+}
+
+void SpawnEnemy(void)
+{
+    // find an inactive slot
+    int slot = -1;
+    for (int i = 0; i < MAX_ENEMIES; i++)
+    {
+        if (!enemies[i].active) 
+        {
+            slot = i;
+            break;
+        }
+    }
+    if (slot == -1) return; // no free slot, skip spawning this time
+
+    Vector2 spawnPos = GetSpawnPosition();
+
+    // direction: from spawn point toward the player
+    Vector2 toPlayer = Vector2Subtract(player.position, spawnPos);
+    Vector2 dir = Vector2Normalize(toPlayer);
+
+    enemies[slot].position = spawnPos;
+    enemies[slot].direction = dir;
+    enemies[slot].active = true;
+}
+
+Vector2 GetSpawnPosition(void)
+{
+    Edge edge = GetRandomValue(0, 3);
+    Vector2 pos = {0.0f, 0.0f};
+
+    switch (edge)
+    {
+    case EDGE_TOP:
+        pos = (Vector2){GetRandomValue(0, screenWidth), 0.0f};
+        break;
+    case EDGE_BOTTOM:
+        pos = (Vector2){GetRandomValue(0, screenWidth), screenHeight};
+        break;
+    case EDGE_LEFT:
+        pos = (Vector2){0.0f, GetRandomValue(0, screenHeight)};
+        break;
+    case EDGE_RIGHT:
+        pos = (Vector2){screenWidth, GetRandomValue(0, screenHeight)};
+        break;
+    default:
+        break;
+    }
+
+    return pos;
 }
 
 // Draw gameplay screen
@@ -372,6 +474,13 @@ static void DrawGamePlayScreen(void)
             bullets[i].color
         );
     }
+
+    for (int i = 0; i < MAX_ENEMIES; i++)
+    {
+        if (enemies[i].active)
+            DrawPoly(enemies[i].position, 6, enemies[i].radius, 0.0f, enemies[i].color);
+    }
+    
 }
 
 // Update ending screen
