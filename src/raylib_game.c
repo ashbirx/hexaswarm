@@ -36,6 +36,7 @@
 #define MAX_BULLETS 64
 #define FIRE_RATE 4 // 4 shots in 1 second
 #define MAX_ENEMIES 32
+#define MERGE_DIST 60.0f
 
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
@@ -108,7 +109,7 @@ static int fireInterval = 60 / FIRE_RATE; //  1 shot per 15 frames, so 4 shots i
 static int fireCooldown = 0;
 
 static Enemy enemies[MAX_ENEMIES] = { 0 };
-static int enemySpawnInterval = 90; // enemies will spwan after every 1.5 sec
+static int enemySpawnInterval = 60; // enemies will spwan after every 1 sec
 static int enemySpawnCooldown = 0;
 
 //----------------------------------------------------------------------------------
@@ -135,6 +136,7 @@ static void UpdateEnemies(void);
 // gameplay utils
 static void SpawnEnemy(void);
 static Vector2 GetSpawnPosition(void);
+static void MergeEnemies(int a, int b);
 
 static void UpdateEndingScreen(void);
 static void DrawEndingScreen(void);
@@ -260,7 +262,7 @@ static void UpdateDrawFrame(void)
     // it could be useful for scaling or further shader postprocessing
     BeginTextureMode(target);
         ClearBackground(RAYWHITE);
-        DrawRectangleLinesEx((Rectangle){ 0, 0, screenWidth, screenHeight }, 16, BLACK);
+        // DrawRectangleLinesEx((Rectangle){ 0, 0, screenWidth, screenHeight }, 16, BLACK);
         
         // TODO: Draw your game screen here
         switch (currentScreen)
@@ -390,21 +392,37 @@ static void UpdateBullets(void)
 {
     for (int i = 0; i < MAX_BULLETS; i++)
     {
-        if (bullets[i].active)
-        {
-            bullets[i].position.x += bullets[i].direction.x * bullets[i].speed;
-            bullets[i].position.y += bullets[i].direction.y * bullets[i].speed;
+        if (!bullets[i].active) continue;
 
-            // deactivate once fully off-screen (with a small margin for radius)
-            if (bullets[i].position.x < 0 - bullets[i].radius ||
-                bullets[i].position.x > screenWidth + bullets[i].radius ||
-                bullets[i].position.y < 0 - bullets[i].radius ||
-                bullets[i].position.y > screenHeight + bullets[i].radius
+        bullets[i].position.x += bullets[i].direction.x * bullets[i].speed;
+        bullets[i].position.y += bullets[i].direction.y * bullets[i].speed;
+
+        // deactivate once fully off-screen (with a small margin for radius)
+        if (bullets[i].position.x < 0 - bullets[i].radius ||
+            bullets[i].position.x > screenWidth + bullets[i].radius ||
+            bullets[i].position.y < 0 - bullets[i].radius ||
+            bullets[i].position.y > screenHeight + bullets[i].radius
+        )
+        {
+            bullets[i].active = false;
+        }
+
+        // collision detection and resolution: bullet vs enemy
+        for (int j = 0; j < MAX_ENEMIES; j++)
+        {
+            if (!enemies[j].active) continue;
+
+            if (CheckCollisionCircles(
+                bullets[i].position, bullets[i].radius, 
+                enemies[j].position, enemies[j].radius)
             )
             {
+                enemies[j].hp--;
+                if (enemies[j].hp <= 0) enemies[j].active = false;
                 bullets[i].active = false;
+                break;
             }
-        }
+        }  
     }
 }
 
@@ -424,31 +442,49 @@ static void UpdateEnemies(void)
     // enemy movement + collision
     for (int i = 0; i < MAX_ENEMIES; i++)
     {
-        if (enemies[i].active)
+        if (!enemies[i].active) continue;
+
+        // move towards player
+        enemies[i].position.x += enemies[i].direction.x * enemies[i].speed;
+        enemies[i].position.y += enemies[i].direction.y * enemies[i].speed;
+
+        // collision detection & resolution: enemy vs walls (x-axis)
+        if (
+            (enemies[i].position.x - enemies[i].radius <= 0 && enemies[i].direction.x < 0) ||
+            (enemies[i].position.x + enemies[i].radius >= screenWidth && enemies[i].direction.x > 0)
+        )
+            enemies[i].direction.x *= -1;
+
+        // collision detection & resolution: enemy vs walls (y-axis)
+        if (
+            (enemies[i].position.y - enemies[i].radius <= 0 && enemies[i].direction.y < 0) ||
+            (enemies[i].position.y + enemies[i].radius>= screenHeight && enemies[i].direction.y > 0)
+        )
+            enemies[i].direction.y *= -1;
+
+        // collision detection & resolution: enemy vs player
+        if (CheckCollisionCircles(enemies[i].position, enemies[i].radius, player.position, player.radius))
         {
-            // move towards player
-            enemies[i].position.x += enemies[i].direction.x * enemies[i].speed;
-            enemies[i].position.y += enemies[i].direction.y * enemies[i].speed;
+            enemies[i].active = false;
+            LOG("Enemy reached player!\n");
+        }
 
-            // collision detection & resolution: enemy vs walls (x-axis)
-            if (
-                (enemies[i].position.x - enemies[i].radius <= 0 && enemies[i].direction.x < 0) ||
-                (enemies[i].position.x + enemies[i].radius >= screenWidth && enemies[i].direction.x > 0)
-            )
-                enemies[i].direction.x *= -1;
+        // merge detection + resolution
+        for (int j = i + 1; j < MAX_ENEMIES; j++)
+        {
+            if (!enemies[j].active) continue;
 
-            // collision detection & resolution: enemy vs walls (y-axis)
-            if (
-                (enemies[i].position.y - enemies[i].radius <= 0 && enemies[i].direction.y < 0) ||
-                (enemies[i].position.y + enemies[i].radius>= screenHeight && enemies[i].direction.y > 0)
-            )
-                enemies[i].direction.y *= -1;
+            float mergeDistance = enemies[i].radius + enemies[j].radius + MERGE_DIST;
+            
+            float dist = Vector2Distance(
+                enemies[i].position,
+                enemies[j].position
+            );
 
-            // collision detection & resolution: enemy vs player
-            if (CheckCollisionCircles(enemies[i].position, enemies[i].radius, player.position, player.radius))
+            if (dist <= mergeDistance)
             {
-                enemies[i].active = false;
-                LOG("Enemy reached player!\n");
+                MergeEnemies(i, j);
+                break;
             }
         }
     }
@@ -470,13 +506,22 @@ static void SpawnEnemy(void)
 
     Vector2 spawnPos = GetSpawnPosition();
 
-    // direction: from spawn point toward the player
-    Vector2 toPlayer = Vector2Subtract(player.position, spawnPos);
-    Vector2 dir = Vector2Normalize(toPlayer);
+    // direction: from spawn point toward a random target point
+    Vector2 dir = Vector2Normalize(
+        Vector2Subtract((Vector2){
+            GetRandomValue(0, screenWidth), 
+            GetRandomValue(0, screenHeight)
+        }, 
+        spawnPos
+    ));
 
     enemies[slot].position = spawnPos;
     enemies[slot].direction = dir;
+    enemies[slot].radius = 20.0f;
+    enemies[slot].speed = 2.0f;
+    enemies[slot].hp = 1;
     enemies[slot].active = true;
+    enemies[slot].color = DARKGREEN;
 }
 
 static Vector2 GetSpawnPosition(void)
@@ -503,6 +548,36 @@ static Vector2 GetSpawnPosition(void)
     }
 
     return pos;
+}
+
+static void MergeEnemies(int a, int b)
+{
+    Enemy mergedEnemy = { 0 };
+
+    Vector2 position = (Vector2){
+        (enemies[a].position.x + enemies[b].position.x) * 0.5f,
+        (enemies[a].position.y + enemies[b].position.y) * 0.5f,
+    };
+
+    float radius = sqrtf(
+        enemies[a].radius * enemies[a].radius +
+        enemies[b].radius * enemies[b].radius
+    );
+
+    Vector2 direction = Vector2Normalize(
+        Vector2Subtract(player.position, position)
+    );
+
+    mergedEnemy.position = position;
+    mergedEnemy.radius = radius;
+    mergedEnemy.direction = direction;
+    mergedEnemy.hp = enemies[a].hp + enemies[b].hp;
+    mergedEnemy.speed = 3.0f;
+    mergedEnemy.active = true;
+    mergedEnemy.color = MAROON;
+
+    enemies[b].active = false;
+    enemies[a] = mergedEnemy;
 }
 
 // Draw gameplay screen
