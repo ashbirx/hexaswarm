@@ -99,11 +99,14 @@ static int frameCounter = 0;
 // TODO: Define global variables here, recommended to make them static
 static GameScreen currentScreen = SCREEN_LOGO;
 static bool gamePaused = false;
+
 static Player player = { 0 };
+
 static Bullet bullets[MAX_BULLETS] = { 0 };
 static int bulletIndex = 0;
 static int fireInterval = 60 / FIRE_RATE; //  1 shot per 15 frames, so 4 shots in 60 frames (1 sec)
 static int fireCooldown = 0;
+
 static Enemy enemies[MAX_ENEMIES] = { 0 };
 static int enemySpawnInterval = 90; // enemies will spwan after every 1.5 sec
 static int enemySpawnCooldown = 0;
@@ -124,11 +127,17 @@ static void DrawTitleScreen(void);
 static void UpdateGamePlayScreen(void);
 static void DrawGamePlayScreen(void);
 
-static void UpdateEndingScreen(void);
-static void DrawEndingScreen(void);
+// gameplay modules
+static void UpdatePlayer(void);
+static void UpdateBullets(void);
+static void UpdateEnemies(void);
 
+// gameplay utils
 static void SpawnEnemy(void);
 static Vector2 GetSpawnPosition(void);
+
+static void UpdateEndingScreen(void);
+static void DrawEndingScreen(void);
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -180,7 +189,7 @@ int main(void)
 // Module Functions Definition
 //--------------------------------------------------------------------------------------------
 // Init game
-void InitGame(void)
+static void InitGame(void)
 {
     // init player
     player.radius = 25.0f;
@@ -204,7 +213,7 @@ void InitGame(void)
         bullets[i].active = false;
     }
 
-    // init enemy
+    // init enemies
     for (int i = 0; i < MAX_ENEMIES; i++)
     {
         enemies[i].position = (Vector2){0.0f, 0.0f};
@@ -218,7 +227,7 @@ void InitGame(void)
 }
 
 // Update and draw frame
-void UpdateDrawFrame(void)
+static void UpdateDrawFrame(void)
 {
     // Update
     //----------------------------------------------------------------------------------
@@ -288,7 +297,9 @@ void UpdateDrawFrame(void)
     //----------------------------------------------------------------------------------  
 }
 
-// Update logo screen
+//----------------------------------------------------------------------------------
+// Screen: Logo
+//----------------------------------------------------------------------------------
 static void UpdateLogoScreen(void)
 {
     if (frameCounter > 180)
@@ -298,7 +309,6 @@ static void UpdateLogoScreen(void)
     }
 }
 
-// Draw logo screen
 static void DrawLogoScreen(void)
 {
     int secondsLeft = 3 - (frameCounter/60);
@@ -309,14 +319,15 @@ static void DrawLogoScreen(void)
     DrawText(subTitle, screenWidth/2 - MeasureText(subTitle, fontSize)/2, screenHeight/2 + fontSize*3/2 + 20, fontSize, BLACK);
 }
 
-// Update title screen
+//----------------------------------------------------------------------------------
+// Screen: Title
+//----------------------------------------------------------------------------------
 static void UpdateTitleScreen(void)
 {
     if (IsKeyPressed(KEY_ENTER))
         currentScreen = SCREEN_GAMEPLAY;
 }
 
-// Draw title screen
 static void DrawTitleScreen(void)
 {
     const char *title = "TITLE SCREEN";
@@ -327,6 +338,9 @@ static void DrawTitleScreen(void)
         DrawText(subTitle, screenWidth/2 - MeasureText(subTitle, fontSize)/2, screenHeight/2 + fontSize*3/2 + 20, fontSize, BLACK);
 }
 
+//----------------------------------------------------------------------------------
+// Screen: Gameplay
+//----------------------------------------------------------------------------------
 // Update gameplay screen
 static void UpdateGamePlayScreen(void)
 {
@@ -337,15 +351,24 @@ static void UpdateGamePlayScreen(void)
     if (gamePaused)
         return;
 
+    UpdatePlayer();
+    UpdateBullets();
+    UpdateEnemies();
+}
+
+// Update player (rotation + firing)
+static void UpdatePlayer(void)
+{
     // player rotation about centre of window
     if (IsKeyDown(KEY_RIGHT))
         player.rotation += player.rotationSpeed;
     else if (IsKeyDown(KEY_LEFT))
         player.rotation -= player.rotationSpeed;
 
-    // position the bullet ready to be fired at the tip of the barrel
+    // fire cooldown
     if (fireCooldown > 0) fireCooldown--;
 
+    // fire bullet
     if (IsKeyDown(KEY_SPACE) && fireCooldown <= 0) 
     {
         Vector2 localOffset = { 0.0f, player.barrelSize.y };
@@ -360,8 +383,11 @@ static void UpdateGamePlayScreen(void)
         bulletIndex = (bulletIndex + 1) % MAX_BULLETS;
         fireCooldown = fireInterval;
     }
+}
 
-    // bullet movement logic
+// Update bullets (movement + collision)
+static void UpdateBullets(void)
+{
     for (int i = 0; i < MAX_BULLETS; i++)
     {
         if (bullets[i].active)
@@ -380,20 +406,22 @@ static void UpdateGamePlayScreen(void)
             }
         }
     }
+}
+
+// Update enemies (spawning, movement, wall bounce, player collision)
+static void UpdateEnemies(void)
+{
+    // enemy spawn cooldown
+    if (enemySpawnCooldown > 0) enemySpawnCooldown--;
 
     // enemy spawning
-    if (enemySpawnCooldown > 0)
-    {
-        enemySpawnCooldown--;
-    }
-
     if (enemySpawnCooldown == 0)
     {
         SpawnEnemy();
         enemySpawnCooldown = enemySpawnInterval;
     }
 
-    // enemy movement logic
+    // enemy movement + collision
     for (int i = 0; i < MAX_ENEMIES; i++)
     {
         if (enemies[i].active)
@@ -402,13 +430,15 @@ static void UpdateGamePlayScreen(void)
             enemies[i].position.x += enemies[i].direction.x * enemies[i].speed;
             enemies[i].position.y += enemies[i].direction.y * enemies[i].speed;
 
-            // collision detection & resolution: enemy vs walls
+            // collision detection & resolution: enemy vs walls (x-axis)
             if (
                 (enemies[i].position.x - enemies[i].radius <= 0 && enemies[i].direction.x < 0) ||
                 (enemies[i].position.x + enemies[i].radius >= screenWidth && enemies[i].direction.x > 0)
             )
                 enemies[i].direction.x *= -1;
-           if (
+
+            // collision detection & resolution: enemy vs walls (y-axis)
+            if (
                 (enemies[i].position.y - enemies[i].radius <= 0 && enemies[i].direction.y < 0) ||
                 (enemies[i].position.y + enemies[i].radius>= screenHeight && enemies[i].direction.y > 0)
             )
@@ -424,7 +454,7 @@ static void UpdateGamePlayScreen(void)
     }
 }
 
-void SpawnEnemy(void)
+static void SpawnEnemy(void)
 {
     // find an inactive slot
     int slot = -1;
@@ -449,7 +479,7 @@ void SpawnEnemy(void)
     enemies[slot].active = true;
 }
 
-Vector2 GetSpawnPosition(void)
+static Vector2 GetSpawnPosition(void)
 {
     Edge edge = GetRandomValue(0, 3);
     Vector2 pos = {0.0f, 0.0f};
@@ -498,11 +528,7 @@ static void DrawGamePlayScreen(void)
     for (int i = 0; i < MAX_BULLETS; i++)
     {
         if (bullets[i].active)
-        DrawCircleV(
-            bullets[i].position, 
-            bullets[i].radius, 
-            bullets[i].color
-        );
+            DrawCircleV(bullets[i].position, bullets[i].radius, bullets[i].color);
     }
 
     for (int i = 0; i < MAX_ENEMIES; i++)
@@ -510,17 +536,17 @@ static void DrawGamePlayScreen(void)
         if (enemies[i].active)
             DrawPoly(enemies[i].position, 6, enemies[i].radius, 0.0f, enemies[i].color);
     }
-    
 }
 
-// Update ending screen
+//----------------------------------------------------------------------------------
+// Screen: Ending
+//----------------------------------------------------------------------------------
 static void UpdateEndingScreen(void)
 {
     if (IsKeyPressed(KEY_ENTER))
         currentScreen = SCREEN_TITLE;
 }
 
-// Draw ending screen
 static void DrawEndingScreen(void)
 {
     const char *title = "ENDING SCREEN";
