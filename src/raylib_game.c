@@ -76,6 +76,7 @@ typedef struct Enemy
     float speed;
     float radius;
     int hp;
+    int points;
     Color color;
     bool active;
 } Enemy;
@@ -100,6 +101,7 @@ static int frameCounter = 0;
 // TODO: Define global variables here, recommended to make them static
 static GameScreen currentScreen = SCREEN_LOGO;
 static bool gamePaused = false;
+static int score = 0;
 
 static Player player = { 0 };
 
@@ -193,6 +195,9 @@ int main(void)
 // Init game
 static void InitGame(void)
 {
+    // init score
+    score = 0;
+
     // init player
     player.radius = 25.0f;
     player.position = (Vector2){
@@ -221,8 +226,9 @@ static void InitGame(void)
         enemies[i].position = (Vector2){0.0f, 0.0f};
         enemies[i].direction = (Vector2){0.0f, 0.0f};
         enemies[i].radius = 20.0f;
-        enemies[i].speed = 1.5f;
+        enemies[i].speed = 2.0f;
         enemies[i].hp = 1;
+        enemies[i].points = enemies[i].hp*10;
         enemies[i].active = false;
         enemies[i].color = DARKGREEN;
     }
@@ -327,7 +333,10 @@ static void DrawLogoScreen(void)
 static void UpdateTitleScreen(void)
 {
     if (IsKeyPressed(KEY_ENTER))
+    {
         currentScreen = SCREEN_GAMEPLAY;
+        InitGame();
+    }
 }
 
 static void DrawTitleScreen(void)
@@ -346,8 +355,6 @@ static void DrawTitleScreen(void)
 // Update gameplay screen
 static void UpdateGamePlayScreen(void)
 {
-    if (IsKeyPressed(KEY_ENTER))
-        currentScreen = SCREEN_ENDING;
     if (IsKeyPressed(KEY_P))
         gamePaused = !gamePaused;
     if (gamePaused)
@@ -418,7 +425,11 @@ static void UpdateBullets(void)
             )
             {
                 enemies[j].hp--;
-                if (enemies[j].hp <= 0) enemies[j].active = false;
+                if (enemies[j].hp <= 0)
+                {
+                    enemies[j].active = false;
+                    score += enemies[j].points;
+                }
                 bullets[i].active = false;
                 break;
             }
@@ -466,7 +477,7 @@ static void UpdateEnemies(void)
         if (CheckCollisionCircles(enemies[i].position, enemies[i].radius, player.position, player.radius))
         {
             enemies[i].active = false;
-            LOG("Enemy reached player!\n");
+            currentScreen = SCREEN_ENDING;
         }
 
         // merge detection + resolution
@@ -520,6 +531,7 @@ static void SpawnEnemy(void)
     enemies[slot].radius = 20.0f;
     enemies[slot].speed = 2.0f;
     enemies[slot].hp = 1;
+    enemies[slot].points = enemies[slot].hp*10;
     enemies[slot].active = true;
     enemies[slot].color = DARKGREEN;
 }
@@ -572,6 +584,7 @@ static void MergeEnemies(int a, int b)
     mergedEnemy.radius = radius;
     mergedEnemy.direction = direction;
     mergedEnemy.hp = enemies[a].hp + enemies[b].hp;
+    mergedEnemy.points = mergedEnemy.hp*10;
     mergedEnemy.speed = 3.0f;
     mergedEnemy.active = true;
     mergedEnemy.color = MAROON;
@@ -583,6 +596,8 @@ static void MergeEnemies(int a, int b)
 // Draw gameplay screen
 static void DrawGamePlayScreen(void)
 {
+    DrawText(TextFormat("SCORE: %d", score), 20, 20, fontSize, BLACK);
+
     if (gamePaused) {
         DrawText("GAME PAUSED", screenWidth/2 - MeasureText("GAME PAUSED", fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, BLACK);
         return;
@@ -624,7 +639,7 @@ static void UpdateEndingScreen(void)
 
 static void DrawEndingScreen(void)
 {
-    const char *title = "ENDING SCREEN";
+    const char *title = TextFormat("SCORE: %d", score);
     const char *subTitle = "PRESS [ENTER] TO PLAY AGAIN";
 
     DrawText(title, screenWidth/2 - MeasureText(title, fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, BLACK);
