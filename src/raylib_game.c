@@ -37,6 +37,7 @@
 #define FIRE_RATE 4 // 4 shots in 1 second
 #define MAX_ENEMIES 32
 #define MERGE_DIST 60.0f
+#define PLAYER_LIFES 5
 
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
@@ -56,6 +57,7 @@ typedef struct Player
     Vector2 barrelSize;
     float rotationSpeed;
     float rotation;
+    int lifes;
     Color color;
 } Player;
 
@@ -79,6 +81,7 @@ typedef struct Enemy
     int points;
     Color color;
     bool active;
+    bool isMergedEnemy;
 } Enemy;
 
 typedef enum Edge
@@ -113,6 +116,8 @@ static int fireCooldown = 0;
 static Enemy enemies[MAX_ENEMIES] = { 0 };
 static int enemySpawnInterval = 60; // enemies will spwan after every 1 sec
 static int enemySpawnCooldown = 0;
+static int mergeInterval = 600;
+static int mergeCooldown = 0;
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -195,8 +200,12 @@ int main(void)
 // Init game
 static void InitGame(void)
 {
-    // init score
+    // init score, bulletIndex and cooldown timers
     score = 0;
+    bulletIndex = 0;
+    fireCooldown = 0;
+    enemySpawnCooldown = 0;
+    mergeCooldown = 0;
 
     // init player
     player.radius = 25.0f;
@@ -207,6 +216,7 @@ static void InitGame(void)
     player.barrelSize = (Vector2){20.0f, 50.0f};
     player.rotationSpeed = 5.0f;
     player.rotation = 0.0f;
+    player.lifes = PLAYER_LIFES;
     player.color = BLACK;
 
     // init bullets
@@ -230,6 +240,7 @@ static void InitGame(void)
         enemies[i].hp = 1;
         enemies[i].points = enemies[i].hp*10;
         enemies[i].active = false;
+        enemies[i].isMergedEnemy = false;
         enemies[i].color = DARKGREEN;
     }
 }
@@ -443,6 +454,9 @@ static void UpdateEnemies(void)
     // enemy spawn cooldown
     if (enemySpawnCooldown > 0) enemySpawnCooldown--;
 
+    // enemy merge cooldown
+    if (mergeCooldown > 0) mergeCooldown--;
+
     // enemy spawning
     if (enemySpawnCooldown == 0)
     {
@@ -477,7 +491,8 @@ static void UpdateEnemies(void)
         if (CheckCollisionCircles(enemies[i].position, enemies[i].radius, player.position, player.radius))
         {
             enemies[i].active = false;
-            currentScreen = SCREEN_ENDING;
+            player.lifes--;
+            if (player.lifes <= 0) currentScreen = SCREEN_ENDING;
         }
 
         // merge detection + resolution
@@ -485,17 +500,38 @@ static void UpdateEnemies(void)
         {
             if (!enemies[j].active) continue;
 
-            float mergeDistance = enemies[i].radius + enemies[j].radius + MERGE_DIST;
-            
-            float dist = Vector2Distance(
-                enemies[i].position,
-                enemies[j].position
-            );
-
-            if (dist <= mergeDistance)
+            if (mergeCooldown == 0)
             {
-                MergeEnemies(i, j);
-                break;
+                float mergeDistance = enemies[i].radius + enemies[j].radius + MERGE_DIST;
+            
+                float dist = Vector2Distance(
+                    enemies[i].position,
+                    enemies[j].position
+                );
+                
+                if (dist <= mergeDistance)
+                {
+                    MergeEnemies(i, j);
+                    mergeCooldown = mergeInterval;
+                    break;
+                }
+            }
+            
+            Vector2 toJ = Vector2Subtract(enemies[j].position, enemies[i].position);
+            float approaching = Vector2DotProduct(enemies[i].direction, toJ);
+
+            if (
+                CheckCollisionCircles(enemies[i].position, enemies[i].radius, enemies[j].position, enemies[j].radius) && 
+                !enemies[i].isMergedEnemy && 
+                !enemies[j].isMergedEnemy &&
+                approaching > 0
+            )
+            {
+                enemies[i].direction.x *= -1;
+                enemies[i].direction.y *= -1;
+
+                enemies[j].direction.x *= -1;
+                enemies[j].direction.y *= -1;
             }
         }
     }
@@ -533,6 +569,7 @@ static void SpawnEnemy(void)
     enemies[slot].hp = 1;
     enemies[slot].points = enemies[slot].hp*10;
     enemies[slot].active = true;
+    enemies[slot].isMergedEnemy = false;
     enemies[slot].color = DARKGREEN;
 }
 
@@ -587,6 +624,7 @@ static void MergeEnemies(int a, int b)
     mergedEnemy.points = mergedEnemy.hp*10;
     mergedEnemy.speed = 3.0f;
     mergedEnemy.active = true;
+    mergedEnemy.isMergedEnemy = true;
     mergedEnemy.color = MAROON;
 
     enemies[b].active = false;
@@ -597,6 +635,13 @@ static void MergeEnemies(int a, int b)
 static void DrawGamePlayScreen(void)
 {
     DrawText(TextFormat("SCORE: %d", score), 20, 20, fontSize, BLACK);
+
+    for (int i = 0; i < player.lifes; i++)
+        DrawRectangle(screenWidth - 215 + 40*i, 20, 35, 20, GREEN);
+
+    const char *text = TextFormat("NEXT MERGE IN: %ds", mergeCooldown/60);
+    if (mergeCooldown > 0)
+        DrawText(text, screenWidth/2 - MeasureText(text, fontSize)/2, 20, fontSize, BLACK);
 
     if (gamePaused) {
         DrawText("GAME PAUSED", screenWidth/2 - MeasureText("GAME PAUSED", fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, BLACK);
