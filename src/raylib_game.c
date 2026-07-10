@@ -521,17 +521,32 @@ static void UpdateEnemies(void)
             float approaching = Vector2DotProduct(enemies[i].direction, toJ);
 
             if (
-                CheckCollisionCircles(enemies[i].position, enemies[i].radius, enemies[j].position, enemies[j].radius) && 
-                !enemies[i].isMergedEnemy && 
-                !enemies[j].isMergedEnemy &&
+                CheckCollisionCircles(enemies[i].position, enemies[i].radius, enemies[j].position, enemies[j].radius) &&
                 approaching > 0
             )
             {
-                enemies[i].direction.x *= -1;
-                enemies[i].direction.y *= -1;
+                // both normal: both bounce
+                if (!enemies[i].isMergedEnemy && !enemies[j].isMergedEnemy)
+                {
+                    enemies[i].direction.x *= -1;
+                    enemies[i].direction.y *= -1;
 
-                enemies[j].direction.x *= -1;
-                enemies[j].direction.y *= -1;
+                    enemies[j].direction.x *= -1;
+                    enemies[j].direction.y *= -1;
+                }
+                // i is elite, j is normal: only j bounces
+                else if (enemies[i].isMergedEnemy && !enemies[j].isMergedEnemy)
+                {
+                    enemies[j].direction.x *= -1;
+                    enemies[j].direction.y *= -1;
+                }
+                // i is normal, j is elite: only i bounces
+                else if (!enemies[i].isMergedEnemy && enemies[j].isMergedEnemy)
+                {
+                    enemies[i].direction.x *= -1;
+                    enemies[i].direction.y *= -1;
+                }
+                // both elite: no bounce, they pass through each other
             }
         }
     }
@@ -643,11 +658,6 @@ static void DrawGamePlayScreen(void)
     if (mergeCooldown > 0)
         DrawText(text, screenWidth/2 - MeasureText(text, fontSize)/2, 20, fontSize, BLACK);
 
-    if (gamePaused) {
-        DrawText("GAME PAUSED", screenWidth/2 - MeasureText("GAME PAUSED", fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, BLACK);
-        return;
-    }
-
     // turret body
     DrawCircleV(player.position, player.radius, player.color);
 
@@ -670,6 +680,12 @@ static void DrawGamePlayScreen(void)
     {
         if (enemies[i].active)
             DrawPoly(enemies[i].position, 6, enemies[i].radius, 0.0f, enemies[i].color);
+    }
+
+    // pause overlay (drawn on top of everything)
+    if (gamePaused) {
+        DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.5f));
+        DrawText("GAME PAUSED", screenWidth/2 - MeasureText("GAME PAUSED", fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, WHITE);
     }
 }
 
