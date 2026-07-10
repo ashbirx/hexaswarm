@@ -46,7 +46,8 @@ typedef enum {
     SCREEN_LOGO = 0, 
     SCREEN_TITLE, 
     SCREEN_GAMEPLAY, 
-    SCREEN_ENDING
+    SCREEN_ENDING,
+    SCREEN_HOWTOPLAY
 } GameScreen;
 
 // TODO: Define your custom data types here
@@ -104,6 +105,7 @@ static int frameCounter = 0;
 // TODO: Define global variables here, recommended to make them static
 static GameScreen currentScreen = SCREEN_LOGO;
 static bool gamePaused = false;
+static bool shouldClose = false;
 static int score = 0;
 
 static Player player = { 0 };
@@ -148,6 +150,19 @@ static void MergeEnemies(int a, int b);
 static void UpdateEndingScreen(void);
 static void DrawEndingScreen(void);
 
+static void UpdateHowToPlayScreen(void);
+static void DrawHowToPlayScreen(void);
+
+// menu utils
+static Rectangle GetMenuButtonRect(const char *label, int centerX, int y);
+static bool IsMenuButtonActivated(Rectangle rect, int hotkey);
+static void DrawMenuButton(const char *label, Rectangle rect);
+
+// menu layouts
+static void GetTitleScreenButtons(Rectangle *rPlay, Rectangle *rHowTo, Rectangle *rQuit);
+static void GetEndingScreenButtons(Rectangle *rRestart, Rectangle *rQuit);
+static void GetHowToPlayScreenButton(Rectangle *rBack);
+
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -176,7 +191,7 @@ int main(void)
     //--------------------------------------------------------------------------------------
 
     // Main game loop
-    while (!WindowShouldClose())    // Detect window close button
+    while (!WindowShouldClose() && !shouldClose)    // Detect window close button or quit action
     {
         UpdateDrawFrame();
     }
@@ -268,6 +283,9 @@ static void UpdateDrawFrame(void)
     case SCREEN_ENDING:
         UpdateEndingScreen();
         break;
+    case SCREEN_HOWTOPLAY:
+        UpdateHowToPlayScreen();
+        break;
     default:
         break;
     }
@@ -295,6 +313,9 @@ static void UpdateDrawFrame(void)
             break;
         case SCREEN_ENDING:
             DrawEndingScreen();
+            break;
+        case SCREEN_HOWTOPLAY:
+            DrawHowToPlayScreen();
             break;
         default:
             break;
@@ -343,21 +364,37 @@ static void DrawLogoScreen(void)
 //----------------------------------------------------------------------------------
 static void UpdateTitleScreen(void)
 {
-    if (IsKeyPressed(KEY_ENTER))
+    Rectangle rPlay, rHowTo, rQuit;
+    GetTitleScreenButtons(&rPlay, &rHowTo, &rQuit);
+
+    if (IsMenuButtonActivated(rPlay, KEY_P))
     {
-        currentScreen = SCREEN_GAMEPLAY;
         InitGame();
+        currentScreen = SCREEN_GAMEPLAY;
+    }
+    else if (IsMenuButtonActivated(rHowTo, KEY_H))
+    {
+        currentScreen = SCREEN_HOWTOPLAY;
+    }
+    else if (IsMenuButtonActivated(rQuit, KEY_Q))
+    {
+        shouldClose = true;
     }
 }
 
 static void DrawTitleScreen(void)
 {
     const char *title = "TITLE SCREEN";
-    const char *subTitle = "PRESS [ENTER] to START";
+    int titleY = screenHeight/2 - fontSize*3/2 - 60;
 
-    DrawText(title, screenWidth/2 - MeasureText(title, fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, BLACK);
-    if ((frameCounter/20)%2) 
-        DrawText(subTitle, screenWidth/2 - MeasureText(subTitle, fontSize)/2, screenHeight/2 + fontSize*3/2 + 20, fontSize, BLACK);
+    DrawText(title, screenWidth/2 - MeasureText(title, fontSize*3)/2, titleY, fontSize*3, BLACK);
+
+    Rectangle rPlay, rHowTo, rQuit;
+    GetTitleScreenButtons(&rPlay, &rHowTo, &rQuit);
+
+    DrawMenuButton("[P] PLAY", rPlay);
+    DrawMenuButton("[H] HOW TO PLAY", rHowTo);
+    DrawMenuButton("[Q] QUIT", rQuit);
 }
 
 //----------------------------------------------------------------------------------
@@ -694,16 +731,169 @@ static void DrawGamePlayScreen(void)
 //----------------------------------------------------------------------------------
 static void UpdateEndingScreen(void)
 {
-    if (IsKeyPressed(KEY_ENTER))
-        currentScreen = SCREEN_TITLE;
+    Rectangle rRestart, rQuit;
+    GetEndingScreenButtons(&rRestart, &rQuit);
+
+    if (IsMenuButtonActivated(rRestart, KEY_R))
+    {
+        InitGame();
+        currentScreen = SCREEN_GAMEPLAY;
+    }
+    else if (IsMenuButtonActivated(rQuit, KEY_Q))
+    {
+        shouldClose = true;
+    }
 }
 
 static void DrawEndingScreen(void)
 {
     const char *title = TextFormat("SCORE: %d", score);
-    const char *subTitle = "PRESS [ENTER] TO PLAY AGAIN";
+    int titleY = screenHeight/2 - fontSize*3/2 - 40;
 
-    DrawText(title, screenWidth/2 - MeasureText(title, fontSize*3)/2, screenHeight/2 - fontSize*3/2, fontSize*3, BLACK);
-    if ((frameCounter/20)%2) 
-        DrawText(subTitle, screenWidth/2 - MeasureText(subTitle, fontSize)/2, screenHeight/2 + fontSize*3/2 + 20, fontSize, BLACK);
+    DrawText(title, screenWidth/2 - MeasureText(title, fontSize*3)/2, titleY, fontSize*3, BLACK);
+
+    Rectangle rRestart, rQuit;
+    GetEndingScreenButtons(&rRestart, &rQuit);
+
+    DrawMenuButton("[R] RESTART", rRestart);
+    DrawMenuButton("[Q] QUIT", rQuit);
+}
+
+//----------------------------------------------------------------------------------
+// Screen: How To Play
+//----------------------------------------------------------------------------------
+static void UpdateHowToPlayScreen(void)
+{
+    Rectangle rBack;
+    GetHowToPlayScreenButton(&rBack);
+
+    if (IsMenuButtonActivated(rBack, KEY_B))
+    {
+        currentScreen = SCREEN_TITLE;
+    }
+}
+
+static void DrawHowToPlayScreen(void)
+{
+    const char *title = "HOW TO PLAY";
+    int titleY = 100;
+
+    DrawText(title, screenWidth/2 - MeasureText(title, fontSize*2)/2, titleY, fontSize*2, BLACK);
+
+    int y = titleY + fontSize*2 + 40;
+    int leftX = 160;
+    int lineSpacing = 30;
+
+    DrawText("[LEFT] [RIGHT]", leftX, y, fontSize, DARKGRAY);
+    DrawText("Rotate turret", leftX + 220, y, fontSize, BLACK);
+
+    DrawText("[SPACE]", leftX, y + lineSpacing, fontSize, DARKGRAY);
+    DrawText("Fire", leftX + 220, y + lineSpacing, fontSize, BLACK);
+
+    DrawText("[P]", leftX, y + lineSpacing*2, fontSize, DARKGRAY);
+    DrawText("Pause", leftX + 220, y + lineSpacing*2, fontSize, BLACK);
+
+    int descY = y + lineSpacing*3 + 30;
+    const char *line1 = "Destroy hexagonal enemies.";
+    const char *line2 = "Enemies merge into stronger elites!";
+    const char *line3 = "Don't let them reach you.";
+
+    DrawText(line1, screenWidth/2 - MeasureText(line1, fontSize)/2, descY, fontSize, BLACK);
+    DrawText(line2, screenWidth/2 - MeasureText(line2, fontSize)/2, descY + lineSpacing, fontSize, BLACK);
+    DrawText(line3, screenWidth/2 - MeasureText(line3, fontSize)/2, descY + lineSpacing*2, fontSize, BLACK);
+
+    Rectangle rBack;
+    GetHowToPlayScreenButton(&rBack);
+    DrawMenuButton("[B] Back", rBack);
+}
+
+//----------------------------------------------------------------------------------
+// Menu Utils
+//----------------------------------------------------------------------------------
+static Rectangle GetMenuButtonRect(const char *label, int centerX, int y)
+{
+    int textWidth = MeasureText(label, fontSize);
+    int padX = 20;
+    int padY = 8;
+    return (Rectangle){
+        (float)centerX - textWidth/2.0f - padX,
+        (float)y - padY,
+        (float)(textWidth + padX*2),
+        (float)(fontSize + padY*2)
+    };
+}
+
+static bool IsMenuButtonActivated(Rectangle rect, int hotkey)
+{
+    bool hovered = CheckCollisionPointRec(GetMousePosition(), rect);
+    bool clicked = hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    bool hotPressed = IsKeyPressed(hotkey);
+    return clicked || hotPressed;
+}
+
+static void DrawMenuButton(const char *label, Rectangle rect)
+{
+    bool hovered = CheckCollisionPointRec(GetMousePosition(), rect);
+
+    // draw background highlight on hover
+    if (hovered)
+        DrawRectangleRec(rect, Fade(BLACK, 0.15f));
+
+    // draw text (change colour on hover)
+    Color textColor = hovered ? DARKGRAY : BLACK;
+    int textWidth = MeasureText(label, fontSize);
+    DrawText(label, (int)(rect.x + (rect.width - textWidth)/2.0f), (int)(rect.y + (rect.height - fontSize)/2.0f), fontSize, textColor);
+}
+
+//----------------------------------------------------------------------------------
+// Menu Layouts
+//----------------------------------------------------------------------------------
+static void GetTitleScreenButtons(Rectangle *rPlay, Rectangle *rHowTo, Rectangle *rQuit)
+{
+    int titleY = screenHeight/2 - fontSize*3/2 - 60;
+    int baseY = titleY + fontSize*3 + 45;
+    int gap = 30;
+
+    int w1 = MeasureText("[P] PLAY", fontSize) + 40;
+    int w2 = MeasureText("[H] HOW TO PLAY", fontSize) + 40;
+    int w3 = MeasureText("[Q] QUIT", fontSize) + 40;
+    int totalWidth = w1 + w2 + w3 + gap * 2;
+    int startX = (screenWidth - totalWidth) / 2;
+
+    int c1 = startX + w1 / 2;
+    int c2 = startX + w1 + gap + w2 / 2;
+    int c3 = startX + w1 + gap + w2 + gap + w3 / 2;
+
+    *rPlay = GetMenuButtonRect("[P] PLAY", c1, baseY);
+    *rHowTo = GetMenuButtonRect("[H] HOW TO PLAY", c2, baseY);
+    *rQuit = GetMenuButtonRect("[Q] QUIT", c3, baseY);
+}
+
+static void GetEndingScreenButtons(Rectangle *rRestart, Rectangle *rQuit)
+{
+    int titleY = screenHeight/2 - fontSize*3/2 - 40;
+    int baseY = titleY + fontSize*3 + 45;
+    int gap = 40;
+
+    int w1 = MeasureText("[R] RESTART", fontSize) + 40;
+    int w2 = MeasureText("[Q] QUIT", fontSize) + 40;
+    int totalWidth = w1 + w2 + gap;
+    int startX = (screenWidth - totalWidth) / 2;
+
+    int c1 = startX + w1 / 2;
+    int c2 = startX + w1 + gap + w2 / 2;
+
+    *rRestart = GetMenuButtonRect("[R] RESTART", c1, baseY);
+    *rQuit = GetMenuButtonRect("[Q] QUIT", c2, baseY);
+}
+
+static void GetHowToPlayScreenButton(Rectangle *rBack)
+{
+    int titleY = 100;
+    int y = titleY + fontSize*2 + 40;
+    int lineSpacing = 30;
+    int descY = y + lineSpacing*3 + 30;
+    int baseY = descY + lineSpacing*3 + 40;
+
+    *rBack = GetMenuButtonRect("[B] Back", screenWidth/2, baseY);
 }
