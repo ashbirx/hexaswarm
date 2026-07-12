@@ -15,6 +15,7 @@ HEXASWARM is a minimalist top-down survival shooter built for the **raylib 6.x G
 ### Controls
 
 Keyboard:
+
 - `LEFT` / `RIGHT` — Rotate turret
 - `SPACE` — Shoot
 - `P` — Pause / Resume
@@ -62,7 +63,7 @@ Keyboard:
 
 ### Links
 
-- itch.io Release: _TODO - add direct game page link once published_
+- itch.io Release: [itch.io Game Page](https://ashwired.itch.io/hexaswarm)
 
 ### Credits / Third-Party Assets
 
@@ -78,4 +79,4 @@ This project's sources are licensed under an unmodified zlib/libpng license, whi
 
 Fonts and other third-party assets retain their own original licenses — see their respective sources linked above.
 
-*Copyright (c) 2026 Ashish ([itsAshDev](https://github.com/itsAshDev))*
+_Copyright (c) 2026 Ashish ([itsAshDev](https://github.com/itsAshDev))_
