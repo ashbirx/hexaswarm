@@ -84,7 +84,11 @@
 #define FX_MERGE              "resources/audio/fx/merge.wav"
 #define FX_HURT               "resources/audio/fx/hurt.ogg"
 #define FX_SELECT             "resources/audio/fx/select.ogg"
+#define FX_YAAY               "resources/audio/fx/yaay.ogg"
 #define MUS_BG                "resources/audio/music/bg_music.ogg"
+
+// Hight score file
+#define HIGHSCORE_FILE         "resources/highscore.sav"
 
 // Game related constants
 #define MAX_BULLETS            64
@@ -173,6 +177,7 @@ typedef struct Sounds
     Sound fxMerge;
     Sound fxHurt;
     Sound fxSelect;
+    Sound fxYaay;
 } Sounds;
 
 typedef struct Buttons
@@ -213,6 +218,9 @@ static Sounds sounds = { 0 };
 
 static Player player = { 0 };
 static int score = 0;
+static int highScoreCurnt = 0;
+static int highScorePrev = 0;
+static bool isNewHighScore = false;
 
 static Bullet bullets[MAX_BULLETS] = { 0 };
 static int bulletIndex = 0;
@@ -269,7 +277,7 @@ static void DrawMenuButtonRow(const char **labels, int count, float startY, Rect
 int main(void)
 {
 #if !defined(_DEBUG)
-    SetTraceLogLevel(LOG_ALL);         // Disable raylib trace log messages
+    SetTraceLogLevel(LOG_NONE);         // Disable raylib trace log messages
 #endif
 
     // Initialization
@@ -305,6 +313,22 @@ int main(void)
     sounds.fxKill = LoadSound(FX_KILL);
     sounds.fxMerge = LoadSound(FX_MERGE);
     sounds.fxHurt = LoadSound(FX_HURT);
+    sounds.fxYaay = LoadSound(FX_YAAY);
+
+    // load high score
+    highScoreCurnt = 0;
+ 
+#if !defined(PLATFORM_WEB)
+    if (FileExists(HIGHSCORE_FILE))
+    {
+        char *text = LoadFileText(HIGHSCORE_FILE);
+        if (text != NULL)
+        {
+            highScoreCurnt = atoi(text);
+            UnloadFileText(text);
+        }
+    }
+#endif
 
     // init game
     InitGame();
@@ -350,6 +374,7 @@ int main(void)
     UnloadSound(sounds.fxKill);
     UnloadSound(sounds.fxMerge);
     UnloadSound(sounds.fxHurt);
+    UnloadSound(sounds.fxYaay);
 
     CloseAudioDevice();
 
@@ -368,6 +393,7 @@ static void InitGame(void)
     // init score, bulletIndex and cooldown timers
     gamePaused = false;
     score = 0;
+    isNewHighScore = false;
     bulletIndex = 0;
     fireCooldown = 0;
     enemySpawnCooldown = 0;
@@ -714,7 +740,24 @@ static void UpdateEnemies(void)
             VFX_TriggerPlayerHit();
             VFX_TriggerHeartPop(player.lifes);
             PlaySound(sounds.fxHurt);
-            if (player.lifes <= 0) currentScreen = SCREEN_ENDING;
+            if (player.lifes <= 0 && currentScreen != SCREEN_ENDING)
+            {
+                isNewHighScore = (score > highScoreCurnt);
+
+                if (isNewHighScore)
+                {
+                    highScorePrev = highScoreCurnt;   // NEW - snapshot before overwriting
+                    highScoreCurnt = score;
+                    PlaySound(sounds.fxYaay);
+
+            #if !defined(PLATFORM_WEB)
+                    const char *text = TextFormat("%d", highScoreCurnt);
+                    SaveFileText(HIGHSCORE_FILE, (char *)text);
+            #endif
+                }
+
+                currentScreen = SCREEN_ENDING;
+            }
         }
 
         for (int j = i + 1; j < MAX_ENEMIES; j++)
@@ -1027,23 +1070,43 @@ static void UpdateEndingScreen(void)
 
 static void DrawEndingScreen(void)
 {
-    // display score
     const char *scoreText = TextFormat("SCORE: %d", score);
     Vector2 s1 = MeasureTextEx(fonts.heading, scoreText, HEAD_BIG, SPACING_HEAD(HEAD_BIG));
-    Vector2 p1 = {screenWidth/2.0f - s1.x/2.0f, screenHeight/2.0f - s1.y/2.0f};
+    Vector2 p1 = {screenWidth/2.0f - s1.x/2.0f,
+                  screenHeight/2.0f - s1.y/2.0f - (isNewHighScore ? 30.0f : 0.0f)};
     DrawTextEx(fonts.heading, scoreText, p1, HEAD_BIG, SPACING_HEAD(HEAD_BIG), COL_TEXT);
 
-    // display highest score
-    const char *highScoreText = "HIGH SCORE: 1200";
-    Vector2 s2 = MeasureTextEx(fonts.heading, highScoreText, HEAD_SMALL, SPACING_HEAD(HEAD_SMALL));
-    Vector2 p2 = {screenWidth/2.0f - s2.x/2.0f, screenHeight/2.0f + s1.y/2.0f + 32.0f};
-    DrawTextEx(fonts.heading, highScoreText, p2, HEAD_SMALL, SPACING_HEAD(HEAD_SMALL), COL_TEXT_DIM);
+    float nextY = p1.y + s1.y + 32.0f;
 
-    // draw menu buttons row
+    if (isNewHighScore)
+    {
+        const char *newHsText = "NEW HIGH SCORE!";
+        Vector2 s2 = MeasureTextEx(fonts.heading, newHsText, HEAD_MED, SPACING_HEAD(HEAD_MED));
+        Vector2 p2 = {screenWidth/2.0f - s2.x/2.0f, nextY};
+        DrawTextEx(fonts.heading, newHsText, p2, HEAD_MED, SPACING_HEAD(HEAD_MED), COL_GREEN);
+
+        nextY = p2.y + s2.y + 12.0f;
+
+        const char *prevText = TextFormat("Previous best: %d", highScorePrev);
+        Vector2 s3 = MeasureTextEx(fonts.body, prevText, BODY_LG, SPACING_BODY(BODY_LG));
+        Vector2 p3 = {screenWidth/2.0f - s3.x/2.0f, nextY};
+        DrawTextEx(fonts.body, prevText, p3, BODY_LG, SPACING_BODY(BODY_LG), COL_TEXT_DIM);
+
+        nextY = p3.y + s3.y + 32.0f;
+    }
+    else
+    {
+        const char *highScoreText = TextFormat("HIGH SCORE: %d", highScoreCurnt);
+        Vector2 s2 = MeasureTextEx(fonts.heading, highScoreText, HEAD_SMALL, SPACING_HEAD(HEAD_SMALL));
+        Vector2 p2 = {screenWidth/2.0f - s2.x/2.0f, nextY};
+        DrawTextEx(fonts.heading, highScoreText, p2, HEAD_SMALL, SPACING_HEAD(HEAD_SMALL), COL_TEXT_DIM);
+
+        nextY = p2.y + s2.y + 32.0f;
+    }
+
     const char *labels[] = { "[R] RESTART", "[H] HOME", "[Q] QUIT" };
-    float startY = p2.y + s2.y + 60.0f;
     Rectangle rects[3] = { 0 };
-    DrawMenuButtonRow(labels, 3, startY, rects);
+    DrawMenuButtonRow(labels, 3, nextY, rects);
     buttons.restartFromEnd = rects[0];
     buttons.goHomeFromEnd = rects[1];
     buttons.quitFromEnd = rects[2];
