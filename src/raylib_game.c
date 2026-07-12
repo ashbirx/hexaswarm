@@ -52,19 +52,19 @@
 #define COL_HP                COL_GREEN
 
 // Font sizes
-// Heading sizes (fonts.bold / m6x11) — short strings: titles, labels, buttons
-#define HEAD_HERO      88.0f   // main game title
-#define HEAD_BIG       56.0f   // big reveals: pause text, final score
-#define HEAD_MED       28.0f   // screen sub-headers, panel section titles, menu buttons
-#define HEAD_SMALL     20.0f   // HUD score, small countdown labels
+// heading sizes
+#define HEAD_HERO             88.0f   // main game title
+#define HEAD_BIG              56.0f   // big reveals: pause text, final score
+#define HEAD_MED              28.0f   // screen sub-headers, panel section titles, menu buttons
+#define HEAD_SMALL            20.0f   // HUD score, small countdown labels
 
-// Body sizes (fonts.regular / m5x7) — longer/descriptive text
-#define BODY_LG        18.0f   // subtitle lines (high score, "POWERED BY")
-#define BODY_MD        14.0f   // paragraph/description lines, controls hint row
+// body sizes
+#define BODY_LG               18.0f   // subtitle lines (high score, "POWERED BY")
+#define BODY_MD               16.0f   // paragraph/description lines, controls hint row
 
 // Letter spacings
-#define SPACING_HEAD(sz)  ((sz) * 0.12f)
-#define SPACING_BODY(sz)  ((sz) * 0.08f)
+#define SPACING_HEAD(sz)      ((sz) * 0.12f)
+#define SPACING_BODY(sz)      ((sz) * 0.08f)
 
 // Fonts
 #define FONT_BODY             "resources/fonts/m5x7.ttf"
@@ -220,7 +220,7 @@ static int fireInterval = 60 / FIRE_RATE; //  1 shot per 15 frames, so 4 shots i
 static int fireCooldown = 0;
 
 static Enemy enemies[MAX_ENEMIES] = { 0 };
-static int enemySpawnInterval = 60; // enemies will spwan after every 1 sec
+static int enemySpawnInterval = 54; // enemies will spwan after every 0.9 sec
 static int enemySpawnCooldown = 0;
 static int mergeInterval = 600; // enemies will merge after every 10 sec, given they are within merge distance
 static int mergeCooldown = 0;
@@ -1034,9 +1034,9 @@ static void DrawEndingScreen(void)
 
     // display highest score
     const char *highScoreText = "HIGH SCORE: 1200";
-    Vector2 s2 = MeasureTextEx(fonts.body, highScoreText, BODY_LG, SPACING_BODY(BODY_LG));
+    Vector2 s2 = MeasureTextEx(fonts.heading, highScoreText, HEAD_SMALL, SPACING_BODY(HEAD_SMALL));
     Vector2 p2 = {screenWidth/2.0f - s2.x/2.0f, screenHeight/2.0f + s1.y/2.0f + 32.0f};
-    DrawTextEx(fonts.body, highScoreText, p2, BODY_LG, SPACING_BODY(BODY_LG), COL_TEXT_DIM);
+    DrawTextEx(fonts.heading, highScoreText, p2, HEAD_SMALL, SPACING_BODY(HEAD_SMALL), COL_TEXT_DIM);
 
     // draw menu buttons row
     const char *labels[] = { "[R] RESTART", "[H] HOME", "[Q] QUIT" };
@@ -1062,28 +1062,28 @@ static void DrawHowToPlayScreen(void)
     DrawTexture(textures.howToPlay, 40, 40, WHITE);
 
     const char *controlsHdr = "CONTROLS";
-    Vector2 s = MeasureTextEx(fonts.heading, controlsHdr, 20.0f, 4.0f);
-    DrawTextEx(fonts.heading, controlsHdr, (Vector2){360.0f - s.x/2.0f, 68.0f}, 20.0f, 4.0f, COL_TEXT);
+    Vector2 s = MeasureTextEx(fonts.heading, controlsHdr, HEAD_SMALL, SPACING_HEAD(HEAD_SMALL));
+    DrawTextEx(fonts.heading, controlsHdr, (Vector2){360.0f - s.x/2.0f, 60.0f}, HEAD_SMALL, SPACING_HEAD(HEAD_SMALL), COL_TEXT);
 
     const char *hint = "[LEFT/RIGHT] Rotate    [SPACE] Shoot    [P] Pause";
-    Vector2 s2 = MeasureTextEx(fonts.body, hint, 16.0f, 3.0f);
-    DrawTextEx(fonts.body, hint, (Vector2){360.0f - s2.x/2.0f, 102.0f}, 16.0f, 3.0f, COL_TEXT_DIM);
+    Vector2 s2 = MeasureTextEx(fonts.body, hint, BODY_LG, SPACING_BODY(BODY_LG));
+    DrawTextEx(fonts.body, hint, (Vector2){360.0f - s2.x/2.0f, 96.0f}, BODY_LG, SPACING_BODY(BODY_LG), COL_TEXT_DIM);
 
-    DrawTextEx(fonts.heading, "YOUR WEAPON", (Vector2){170.0f, 150.0f}, 20.0f, 4.0f, COL_TEXT);
-    DrawTextEx(fonts.body, "Rotate to aim and shoot incoming", (Vector2){170.0f, 182.0f}, 15.0f, 3.0f, COL_TEXT);
-    DrawTextEx(fonts.body, "enemies before they reach you.", (Vector2){170.0f, 202.0f}, 15.0f, 3.0f, COL_TEXT);
+    DrawTextEx(fonts.heading, "YOUR WEAPON", (Vector2){170.0f, 150.0f}, HEAD_SMALL, SPACING_HEAD(HEAD_SMALL), COL_TEXT);
+    DrawTextEx(fonts.body, "Rotate to aim and shoot incoming", (Vector2){170.0f, 184.0f}, BODY_LG, SPACING_BODY(BODY_LG), COL_TEXT);
+    DrawTextEx(fonts.body, "enemies before they reach you.", (Vector2){170.0f, 208.0f}, BODY_LG, SPACING_BODY(BODY_LG), COL_TEXT);
 
-    DrawTextEx(fonts.heading, "HEX ENEMY (REGULAR)", (Vector2){170.0f, 266.0f}, 20.0f, 4.0f, COL_TEXT);
-    DrawTextEx(fonts.body, "Spawns from the arena edges, wanders", (Vector2){170.0f, 298.0f}, 15.0f, 3.0f, COL_TEXT);
-    DrawTextEx(fonts.body, "randomly and bounces off the outer walls.", (Vector2){170.0f, 318.0f}, 15.0f, 3.0f, COL_TEXT);
+    DrawTextEx(fonts.heading, "HEX ENEMY (REGULAR)", (Vector2){170.0f, 266.0f}, HEAD_SMALL, SPACING_HEAD(HEAD_SMALL), COL_TEXT);
+    DrawTextEx(fonts.body, "Spawns from the arena edges, wanders", (Vector2){170.0f, 300.0f}, BODY_LG, SPACING_BODY(BODY_LG), COL_TEXT);
+    DrawTextEx(fonts.body, "randomly and bounces off the outer walls.", (Vector2){170.0f, 324.0f}, BODY_LG, SPACING_BODY(BODY_LG), COL_TEXT);
 
-    DrawTextEx(fonts.heading, "HEX ENEMY (MERGED)", (Vector2){170.0f, 382.0f}, 20.0f, 4.0f, COL_TEXT);
-    DrawTextEx(fonts.body, "Forms when enemies merge. Heads", (Vector2){170.0f, 414.0f}, 15.0f, 3.0f, COL_TEXT);
-    DrawTextEx(fonts.body, "straight for your position to kill you.", (Vector2){170.0f, 434.0f}, 15.0f, 3.0f, COL_TEXT);
+    DrawTextEx(fonts.heading, "HEX ENEMY (MERGED)", (Vector2){170.0f, 382.0f}, HEAD_SMALL, SPACING_HEAD(HEAD_SMALL), COL_TEXT);
+    DrawTextEx(fonts.body, "Forms when enemies merge. Heads", (Vector2){170.0f, 416.0f}, BODY_LG, SPACING_BODY(BODY_LG), COL_TEXT);
+    DrawTextEx(fonts.body, "straight for your position to kill you.", (Vector2){170.0f, 440.0f}, BODY_LG, SPACING_BODY(BODY_LG), COL_TEXT);
 
-    DrawTextEx(fonts.heading, "YOUR LIVES", (Vector2){170.0f, 498.0f}, 20.0f, 4.0f, COL_TEXT);
-    DrawTextEx(fonts.body, "You begin with 5 lives. Lose one", (Vector2){170.0f, 530.0f}, 15.0f, 3.0f, COL_TEXT);
-    DrawTextEx(fonts.body, "whenever an enemy reaches you.", (Vector2){170.0f, 550.0f}, 15.0f, 3.0f, COL_TEXT);
+    DrawTextEx(fonts.heading, "YOUR LIVES", (Vector2){170.0f, 498.0f}, HEAD_SMALL, SPACING_HEAD(HEAD_SMALL), COL_TEXT);
+    DrawTextEx(fonts.body, "You begin with 5 lives. Lose one", (Vector2){170.0f, 532.0f}, BODY_LG, SPACING_BODY(BODY_LG), COL_TEXT);
+    DrawTextEx(fonts.body, "whenever an enemy reaches you.", (Vector2){170.0f, 556.0f}, BODY_LG, SPACING_BODY(BODY_LG), COL_TEXT);
 
     const char *labels[] = { "[B] BACK" };
     Rectangle rects[1] = { 0 };
