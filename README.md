@@ -1,93 +1,81 @@
------------------------------------
-_DISCLAIMER:_
+## HEXASWARM
 
-Welcome to the **raylib game template**!
-
-This template provides a base structure to start developing a small raylib game in plain C. The repo is also pre-configured with a default `LICENSE` (zlib/libpng) and a `README.md` (this one) to be properly filled by users. Feel free to change the LICENSE as required.
-
-All the sections defined by `$(Data to Fill)` are expected to be edited and filled properly. It's recommended to delete this disclaimer message after editing this `README.md` file.
-
-## Getting Started with this template
-
-### Windows: Visual Studio
-
-- After extracting the zip, the parent folder `raylib-game-template` should exist in the same directory as `raylib` itself.  So, your file structure should look like this:
-    - Some parent directory
-        - `raylib`
-            - the contents of https://github.com/raysan5/raylib
-        - `raylib-game-template`
-            - this `README.md` and all other raylib-game-template files
-- If using Visual Studio, open projects/VS2022/raylib-game-template.sln
-- Select on `raylib_game` in the solution explorer, then in the toolbar at the top, click `Project` > `Set as Startup Project`
-- Now you're all set up!  Click `Local Windows Debugger` with the green play arrow and the project will run.
-
-#### Linux
-
-When setting up this template on linux for the first time, install the dependencies from this page:
-([Working on GNU Linux](https://github.com/raysan5/raylib/wiki/Working-on-GNU-Linux))
-
-You can use this templates in a few ways: using Visual Studio, using CMake, or make your own build setup. This repository comes with Visual Studio and CMake already set up.
-
-Chose one of the follow setup options that fit in you development environment.
-
-### CLI: Makefile
-
-```sh
-mkdir ~/raylib-gamejam && cd ~/raylib-gamejam
-git clone --depth 1 --branch 6.0 https://github.com/raysan5/raylib
-make -C raylib/src
-git clone https://github.com/$(User Name)/$(Repo Name).git
-cd $(Repo Name)
-make -C src
-src/raylib_game
-```
-
-This template has been created to be used with raylib (www.raylib.com) and it's licensed under an unmodified zlib/libpng license.
-
-_Copyright (c) 2014-2026 Ramon Santamaria ([@raysan5](https://github.com/raysan5))_
------------------------------------
-
-## $(Game Title)
-
-![$(Game Title)](screenshots/screenshot000.png "$(Game Title)")
+<img src="screenshots/gameplay_demo.gif" width="400" alt="HEXASWARM gameplay demo" style="border: 2px solid #828796; border-radius: 6px;">
 
 ### Description
 
-$(Your Game Description)
+HEXASWARM is a minimalist top-down survival shooter built for the **raylib 6.x Game Jam**. You control a stationary turret gun at the center of the arena — rotate, aim, and shoot down hexagonal enemies swarming in from every edge before they reach you. Enemies that wander too close to each other merge into a larger, more aggressive threat that abandons its random wandering and heads straight for you. Survive as long as you can, rack up your score, and try to beat your own high score.
 
 ### Features
 
- - $(Game Feature 01)
- - $(Game Feature 02)
- - $(Game Feature 03)
+- **Rotate-and-shoot combat** — a single turret gun, full 360° rotation.
+- **Emergent enemy merging** — regular hex enemies that stay near each other combine into a bigger, faster, more dangerous merged enemy that hunts you directly
+- **Persistent high score** — your best run is saved locally (desktop builds) and celebrated with a "New High Score" moment.
 
 ### Controls
 
 Keyboard:
- - $(Game Control 01)
- - $(Game Control 02)
- - $(Game Control 03)
+- `LEFT` / `RIGHT` — Rotate turret
+- `SPACE` — Shoot
+- `P` — Pause / Resume
+- `H` — How To Play / Home (context-dependent menu shortcut)
+- `R` — Restart
+- `B` — Back (from "How To Play" screen)
+- `Q` — Quit
 
 ### Screenshots
 
-_TODO: Show your game to the world, animated GIFs recommended!._
+<table>
+  <tr>
+    <td align="center">
+      <img src="screenshots/title_screen.png" width="260" style="border: 2px solid #828796; border-radius: 6px;"><br>
+      <sub>Title Screen</sub>
+    </td>
+    <td align="center">
+      <img src="screenshots/gameplay.png" width="260" style="border: 2px solid #828796; border-radius: 6px;"><br>
+      <sub>Gameplay</sub>
+    </td>
+    <td align="center">
+      <img src="screenshots/merged_enemy.png" width="260" style="border: 2px solid #828796; border-radius: 6px;"><br>
+      <sub>Enemy Merge in Action</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="screenshots/how_to_play.png" width="260" style="border: 2px solid #828796; border-radius: 6px;"><br>
+      <sub>How To Play</sub>
+    </td>
+    <td align="center">
+      <img src="screenshots/pause_screen.png" width="260" style="border: 2px solid #828796; border-radius: 6px;"><br>
+      <sub>Pause Overlay</sub>
+    </td>
+    <td align="center">
+      <img src="screenshots/new_high_score.png" width="260" style="border: 2px solid #828796; border-radius: 6px;"><br>
+      <sub>New High Score</sub>
+    </td>
+  </tr>
+</table>
 
 ### Developers
 
- - $(Developer 01) - $(Role/Tasks Developed)
- - $(Developer 02) - $(Role/Tasks Developed)
- - $(Developer 03) - $(Role/Tasks Developed)
+- Ashish ([itsAshDev](https://github.com/itsAshDev)) — Game design, programming, pixel art design, and all game systems
 
 ### Links
 
- - YouTube Gameplay: $(YouTube Link)
- - itch.io Release: $(itch.io Game Page)
- - Steam Release: $(Steam Game Page)
+- itch.io Release: _TODO - add direct game page link once published_
+
+### Credits / Third-Party Assets
+
+- Built with [raylib](https://www.raylib.com/) by Ramon Santamaria ([@raysan5](https://github.com/raysan5)), on top of the [raylib gamejam template](https://github.com/raysan5/raylib-gamejam-template)
+- Fonts: **m6x11** and **m5x7** by Daniel Linssen ([managore](https://managore.itch.io/))
+- SFX: `hurt.ogg`, `select.ogg`, `shoot.ogg` — from Kenney's [Sci-Fi Sounds](https://kenney.nl/assets/sci-fi-sounds) asset pack. _(actual file names have been renamed)_
+- SFX: `kill.wav`, `merge.wav` — generated with [rFXGen](https://raylibtech.itch.io/rfxgen) by raylibtech
+- VFX: [`vfx.h`](./src/vfx.h) (muzzle flash, hit flash, death poof, merge pulse, hit vignette, heart-pop) — written with Claude
 
 ### License
 
-This project sources are licensed under an unmodified zlib/libpng license, which is an OSI-certified, BSD-like license that allows static linking with closed source software. Check [LICENSE](LICENSE) for further details.
+This project's sources are licensed under an unmodified zlib/libpng license, which is an OSI-certified, BSD-like license that allows static linking with closed source software. Check [LICENSE](LICENSE) for further details.
 
-$(Additional Licenses)
+Fonts and other third-party assets retain their own original licenses — see their respective sources linked above.
 
-*Copyright (c) $(Year) $(User Name) ($(User Twitter/GitHub Name))*
+*Copyright (c) 2026 Ashish ([itsAshDev](https://github.com/itsAshDev))*
