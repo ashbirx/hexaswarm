@@ -650,6 +650,7 @@ static void UpdateBullets(void)
             )
             {
                 enemies[j].hp--;
+                enemies[j].hitFlashTimer = VFX_HIT_FLASH_DURATION;
                 if (enemies[j].hp <= 0)
                 {
                     VFX_SpawnDeathPoof(enemies[j].position, enemies[j].color);
@@ -1034,9 +1035,9 @@ static void DrawEndingScreen(void)
 
     // display highest score
     const char *highScoreText = "HIGH SCORE: 1200";
-    Vector2 s2 = MeasureTextEx(fonts.heading, highScoreText, HEAD_SMALL, SPACING_BODY(HEAD_SMALL));
+    Vector2 s2 = MeasureTextEx(fonts.heading, highScoreText, HEAD_SMALL, SPACING_HEAD(HEAD_SMALL));
     Vector2 p2 = {screenWidth/2.0f - s2.x/2.0f, screenHeight/2.0f + s1.y/2.0f + 32.0f};
-    DrawTextEx(fonts.heading, highScoreText, p2, HEAD_SMALL, SPACING_BODY(HEAD_SMALL), COL_TEXT_DIM);
+    DrawTextEx(fonts.heading, highScoreText, p2, HEAD_SMALL, SPACING_HEAD(HEAD_SMALL), COL_TEXT_DIM);
 
     // draw menu buttons row
     const char *labels[] = { "[R] RESTART", "[H] HOME", "[Q] QUIT" };
